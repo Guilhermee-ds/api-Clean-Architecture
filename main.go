@@ -108,6 +108,33 @@ func updateTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task updated"})
 }
 
+func deleteTask(c *gin.Context) {
+	idParam := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(idParam)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := collection.DeleteOne(ctx, bson.M{"_id": objID})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result.DeletedCount == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Task not found for delete"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "task deleted sucessful"})
+
+}
+
 func main() {
 	connectDB()
 	router := gin.Default()
@@ -115,6 +142,7 @@ func main() {
 	router.POST("/task", createTask)
 	router.GET("/tasks", listTasks)
 	router.PUT("/task/:id", updateTask)
+	router.DELETE("/delete/:id", deleteTask)
 
 	router.Run(":8080")
 }
